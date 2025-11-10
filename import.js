@@ -2,7 +2,49 @@
 const importData = {
   roddyData: {},
 
-  // Parse CSV file
+  // Parse file (Excel or CSV) and return array of row objects
+  async parseFile(file) {
+    const fileName = file.name.toLowerCase();
+
+    // Check if it's an Excel file
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      return await this.parseExcel(file);
+    } else {
+      // Fall back to CSV parsing
+      const text = await file.text();
+      return this.parseCSV(text);
+    }
+  },
+
+  // Parse Excel file using SheetJS
+  async parseExcel(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          // Get first sheet
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+
+          // Convert to JSON (array of objects)
+          const rows = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: '' });
+
+          resolve(rows);
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      reader.onerror = (err) => reject(err);
+      reader.readAsArrayBuffer(file);
+    });
+  },
+
+  // Parse CSV file (fallback for CSV files)
   parseCSV(text) {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length === 0) return [];
@@ -69,20 +111,19 @@ const importData = {
         const fileInput = document.getElementById(`roddy${county}`);
         if (fileInput.files.length > 0) {
           const file = fileInput.files[0];
-          const text = await file.text();
-          const rows = this.parseCSV(text);
+          const rows = await this.parseFile(file);
 
           rows.forEach(row => {
-            const address = this.normalizeAddress(row.Address || row.address);
+            const address = this.normalizeAddress(row.Address || row.address || row['Property Address']);
             if (address) {
               this.roddyData[address] = {
-                roddy_id: `${county}-${row.ID || Math.random().toString(36).substring(7)}`,
-                address: row.Address || row.address,
+                roddy_id: `${county}-${row.ID || row.id || Math.random().toString(36).substring(7)}`,
+                address: row.Address || row.address || row['Property Address'],
                 city: row.City || row.city,
                 county: county,
                 pool_roddy: row.Pool || row.pool || '',
-                year_built: parseInt(row['Year Built'] || row.year_built || 0),
-                assessed_value: parseFloat(row['Assessed Value'] || row.assessed_value || 0)
+                year_built: parseInt(row['Year Built'] || row.year_built || row.YearBuilt || 0),
+                assessed_value: parseFloat(row['Assessed Value'] || row.assessed_value || row.AssessedValue || 0)
               };
               totalLoaded++;
             }
@@ -132,8 +173,7 @@ const importData = {
       // Process all auction files
       const allProperties = [];
       for (const file of fileInput.files) {
-        const text = await file.text();
-        const rows = this.parseCSV(text);
+        const rows = await this.parseFile(file);
 
         rows.forEach(row => {
           const property = this.buildPropertyObject(row, auction.id);
@@ -170,9 +210,11 @@ const importData = {
     }
   },
 
-  // Build property object from CSV row
+  // Build property object from row
   buildPropertyObject(row, auctionId) {
-    const address = row['Property Address'] || row.address || row.Address;
+    // Try multiple column name variations for address
+    const address = row['Property Address'] || row.address || row.Address ||
+                    row['Property address'] || row['PROPERTY ADDRESS'];
     if (!address) return null;
 
     const normalizedAddress = this.normalizeAddress(address);
@@ -181,19 +223,25 @@ const importData = {
     const property = {
       auction_id: auctionId,
       address: address,
-      city: row.City || row.city || (roddyMatch ? roddyMatch.city : null),
+      city: row.City || row.city || row.CITY || (roddyMatch ? roddyMatch.city : null),
       county: roddyMatch ? roddyMatch.county : null,
-      state: row.State || row.state || 'TX',
-      zip: row.ZIP || row.zip || row['Zip Code'] || null,
-      property_type: row['Property Type'] || row.property_type || 'Single Family',
-      bedrooms: parseInt(row.Bedrooms || row.bedrooms || 0) || null,
-      bathrooms: parseFloat(row.Bathrooms || row.bathrooms || 0) || null,
-      sqft: parseInt(row['Square Footage'] || row.sqft || row['Living Area'] || 0) || null,
-      year_built: parseInt(row['Year Built'] || row.year_built || 0) || (roddyMatch ? roddyMatch.year_built : null),
-      assessed_value: parseFloat(row['Assessed Value'] || row.assessed_value || 0) || (roddyMatch ? roddyMatch.assessed_value : null),
-      starting_bid: parseFloat(row['Starting Bid'] || row.starting_bid || 0) || null,
-      auction_com_id: row['Auction.com ID'] || row.auction_com_id || null,
-      on_auction_site: row.Status === 'Active' ? 'YES' : 'NO'
+      state: row.State || row.state || row.STATE || 'TX',
+      zip: row.ZIP || row.zip || row.Zip || row['Zip Code'] || row['ZIP Code'] || null,
+      property_type: row['Property Type'] || row.property_type || row.PropertyType ||
+                     row['Property type'] || row.Type || 'Single Family',
+      bedrooms: parseInt(row.Bedrooms || row.bedrooms || row.BEDROOMS || row.Beds || 0) || null,
+      bathrooms: parseFloat(row.Bathrooms || row.bathrooms || row.BATHROOMS || row.Baths || 0) || null,
+      sqft: parseInt(row['Square Footage'] || row.sqft || row.SQFT || row['Living Area'] ||
+                     row.SquareFootage || row['Square footage'] || 0) || null,
+      year_built: parseInt(row['Year Built'] || row.year_built || row.YearBuilt ||
+                          row['Year built'] || row.YEAR_BUILT || 0) || (roddyMatch ? roddyMatch.year_built : null),
+      assessed_value: parseFloat(row['Assessed Value'] || row.assessed_value || row.AssessedValue ||
+                                 row['Assessed value'] || 0) || (roddyMatch ? roddyMatch.assessed_value : null),
+      starting_bid: parseFloat(row['Starting Bid'] || row.starting_bid || row.StartingBid ||
+                               row['Starting bid'] || row['Opening Bid'] || 0) || null,
+      auction_com_id: row['Auction.com ID'] || row.auction_com_id || row.AuctionComID ||
+                      row['Auction ID'] || row.ID || null,
+      on_auction_site: (row.Status || row.status || row.STATUS) === 'Active' ? 'YES' : 'NO'
     };
 
     // Add Roddy data if matched

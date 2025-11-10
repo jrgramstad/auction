@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <!-- Password Protection Screen -->
@@ -131,28 +132,28 @@
 
         <div class="import-section">
           <h3>Step 1: Upload Roddy Files</h3>
-          <p>Upload CSV files for each county (CO, DA, DN, EL, TA)</p>
+          <p>Upload Excel (.xlsx, .xls) or CSV files for each county (CO, DA, DN, EL, TA)</p>
 
           <div class="file-upload-grid">
             <div class="file-upload-item">
               <label>Collin County (CO)</label>
-              <input type="file" id="roddyCO" accept=".csv" />
+              <input type="file" id="roddyCO" accept=".xlsx,.xls,.csv" />
             </div>
             <div class="file-upload-item">
               <label>Dallas County (DA)</label>
-              <input type="file" id="roddyDA" accept=".csv" />
+              <input type="file" id="roddyDA" accept=".xlsx,.xls,.csv" />
             </div>
             <div class="file-upload-item">
               <label>Denton County (DN)</label>
-              <input type="file" id="roddyDN" accept=".csv" />
+              <input type="file" id="roddyDN" accept=".xlsx,.xls,.csv" />
             </div>
             <div class="file-upload-item">
               <label>Ellis County (EL)</label>
-              <input type="file" id="roddyEL" accept=".csv" />
+              <input type="file" id="roddyEL" accept=".xlsx,.xls,.csv" />
             </div>
             <div class="file-upload-item">
               <label>Tarrant County (TA)</label>
-              <input type="file" id="roddyTA" accept=".csv" />
+              <input type="file" id="roddyTA" accept=".xlsx,.xls,.csv" />
             </div>
           </div>
 
@@ -162,7 +163,7 @@
 
         <div class="import-section" id="auctionImportSection" style="display: none;">
           <h3>Step 2: Upload Auction.com Files</h3>
-          <p>Upload one or more CSV files from Auction.com</p>
+          <p>Upload one or more Excel (.xlsx, .xls) or CSV files from Auction.com</p>
 
           <div class="file-upload-item">
             <label>Auction Month</label>
@@ -174,7 +175,7 @@
           </div>
           <div class="file-upload-item">
             <label>Auction.com Files</label>
-            <input type="file" id="auctionFiles" accept=".csv" multiple />
+            <input type="file" id="auctionFiles" accept=".xlsx,.xls,.csv" multiple />
           </div>
 
           <button onclick="importData.processAuctionFiles()" class="btn btn-primary">Import & Process</button>
