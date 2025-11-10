@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AJ Auction Management System</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+  <!-- Password Protection Screen -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-box">
+      <h1>🏠 AJ Auction Management</h1>
+      <p>Enter password to access the system</p>
+      <div class="login-form">
+        <input type="password" id="passwordInput" placeholder="Enter password" />
+        <button onclick="app.login()" class="btn btn-primary">Login</button>
+        <div id="loginError" class="error-message"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <div id="mainApp" class="app-container" style="display: none;">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-content">
+        <h1>🏠 AJ Auction Management System</h1>
+        <button onclick="app.logout()" class="btn btn-secondary">Logout</button>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="app-nav">
+      <button class="nav-btn active" data-screen="dashboard" onclick="app.showScreen('dashboard')">
+        📊 Dashboard
+      </button>
+      <button class="nav-btn" data-screen="import" onclick="app.showScreen('import')">
+        📥 Import Data
+      </button>
+      <button class="nav-btn" data-screen="workflow" onclick="app.showScreen('workflow')">
+        👥 Team Workflow
+      </button>
+      <button class="nav-btn" data-screen="review" onclick="app.showScreen('review')">
+        📋 Review Properties
+      </button>
+      <button class="nav-btn" data-screen="analytics" onclick="app.showScreen('analytics')">
+        📈 Analytics
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+      <!-- Dashboard Screen -->
+      <section id="dashboardScreen" class="screen active">
+        <h2>Dashboard</h2>
+        <div class="dashboard-grid">
+          <div class="stat-card">
+            <h3>Active Auction</h3>
+            <div id="activeAuction" class="stat-value">Loading...</div>
+          </div>
+          <div class="stat-card">
+            <h3>Total Properties</h3>
+            <div id="totalProperties" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Excluded</h3>
+            <div id="excludedProperties" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Ready to Bid</h3>
+            <div id="readyToBid" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Budget Remaining</h3>
+            <div id="budgetRemaining" class="stat-value">$0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Days Until Auction</h3>
+            <div id="daysUntilAuction" class="stat-value">-</div>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <h3>Stage Progress</h3>
+          <div class="progress-bars">
+            <div class="progress-item">
+              <label>Stage 1 (Jessica)</label>
+              <div class="progress-bar">
+                <div id="stage1Progress" class="progress-fill" style="width: 0%"></div>
+              </div>
+              <span id="stage1Text">0 / 0</span>
+            </div>
+            <div class="progress-item">
+              <label>Stage 2 (Kalen)</label>
+              <div class="progress-bar">
+                <div id="stage2Progress" class="progress-fill" style="width: 0%"></div>
+              </div>
+              <span id="stage2Text">0 / 0</span>
+            </div>
+            <div class="progress-item">
+              <label>Stage 3 (Christian)</label>
+              <div class="progress-bar">
+                <div id="stage3Progress" class="progress-fill" style="width: 0%"></div>
+              </div>
+              <span id="stage3Text">0 / 0</span>
+            </div>
+            <div class="progress-item">
+              <label>Stage 4 (JR)</label>
+              <div class="progress-bar">
+                <div id="stage4Progress" class="progress-fill" style="width: 0%"></div>
+              </div>
+              <span id="stage4Text">0 / 0</span>
+            </div>
+            <div class="progress-item">
+              <label>Stage 5 (Post-Auction)</label>
+              <div class="progress-bar">
+                <div id="stage5Progress" class="progress-fill" style="width: 0%"></div>
+              </div>
+              <span id="stage5Text">0 / 0</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Import Data Screen -->
+      <section id="importScreen" class="screen">
+        <h2>Import Data</h2>
+
+        <div class="import-section">
+          <h3>Step 1: Upload Roddy Files</h3>
+          <p>Upload CSV files for each county (CO, DA, DN, EL, TA)</p>
+
+          <div class="file-upload-grid">
+            <div class="file-upload-item">
+              <label>Collin County (CO)</label>
+              <input type="file" id="roddyCO" accept=".csv" />
+            </div>
+            <div class="file-upload-item">
+              <label>Dallas County (DA)</label>
+              <input type="file" id="roddyDA" accept=".csv" />
+            </div>
+            <div class="file-upload-item">
+              <label>Denton County (DN)</label>
+              <input type="file" id="roddyDN" accept=".csv" />
+            </div>
+            <div class="file-upload-item">
+              <label>Ellis County (EL)</label>
+              <input type="file" id="roddyEL" accept=".csv" />
+            </div>
+            <div class="file-upload-item">
+              <label>Tarrant County (TA)</label>
+              <input type="file" id="roddyTA" accept=".csv" />
+            </div>
+          </div>
+
+          <button onclick="importData.loadRoddyFiles()" class="btn btn-primary">Load Roddy Data</button>
+          <div id="roddyStatus" class="status-message"></div>
+        </div>
+
+        <div class="import-section" id="auctionImportSection" style="display: none;">
+          <h3>Step 2: Upload Auction.com Files</h3>
+          <p>Upload one or more CSV files from Auction.com</p>
+
+          <div class="file-upload-item">
+            <label>Auction Month</label>
+            <input type="text" id="auctionMonth" placeholder="December 2025" />
+          </div>
+          <div class="file-upload-item">
+            <label>Auction Date</label>
+            <input type="date" id="auctionDate" />
+          </div>
+          <div class="file-upload-item">
+            <label>Auction.com Files</label>
+            <input type="file" id="auctionFiles" accept=".csv" multiple />
+          </div>
+
+          <button onclick="importData.processAuctionFiles()" class="btn btn-primary">Import & Process</button>
+          <div id="auctionStatus" class="status-message"></div>
+        </div>
+
+        <div id="importSummary" class="import-summary" style="display: none;"></div>
+      </section>
+
+      <!-- Team Workflow Screen -->
+      <section id="workflowScreen" class="screen">
+        <h2>Team Workflow</h2>
+
+        <div class="workflow-tabs">
+          <button class="tab-btn active" data-stage="1" onclick="workflow.showStage(1)">
+            Stage 1 (Jessica) <span id="stage1Count" class="badge">0</span>
+          </button>
+          <button class="tab-btn" data-stage="2" onclick="workflow.showStage(2)">
+            Stage 2 (Kalen) <span id="stage2Count" class="badge">0</span>
+          </button>
+          <button class="tab-btn" data-stage="3" onclick="workflow.showStage(3)">
+            Stage 3 (Christian) <span id="stage3Count" class="badge">0</span>
+          </button>
+          <button class="tab-btn" data-stage="4" onclick="workflow.showStage(4)">
+            Stage 4 (JR) <span id="stage4Count" class="badge">0</span>
+          </button>
+          <button class="tab-btn" data-stage="5" onclick="workflow.showStage(5)">
+            Stage 5 (Post-Auction) <span id="stage5Count" class="badge">0</span>
+          </button>
+        </div>
+
+        <!-- Stage 1 Content -->
+        <div id="stage1Content" class="stage-content active">
+          <div id="stage1PropertyView"></div>
+        </div>
+
+        <!-- Stage 2 Content -->
+        <div id="stage2Content" class="stage-content">
+          <div id="stage2PropertyView"></div>
+        </div>
+
+        <!-- Stage 3 Content -->
+        <div id="stage3Content" class="stage-content">
+          <div id="stage3PropertyView"></div>
+        </div>
+
+        <!-- Stage 4 Content -->
+        <div id="stage4Content" class="stage-content">
+          <div id="stage4PropertyView"></div>
+        </div>
+
+        <!-- Stage 5 Content -->
+        <div id="stage5Content" class="stage-content">
+          <div id="stage5PropertyView"></div>
+        </div>
+      </section>
+
+      <!-- Review Properties Screen -->
+      <section id="reviewScreen" class="screen">
+        <h2>Review Properties</h2>
+
+        <div class="filters-bar">
+          <div class="filter-group">
+            <label>Status:</label>
+            <select id="filterStatus" onchange="review.applyFilters()">
+              <option value="all">All</option>
+              <option value="active">Active Only</option>
+              <option value="excluded">Excluded Only</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Stage:</label>
+            <select id="filterStage" onchange="review.applyFilters()">
+              <option value="any">Any</option>
+              <option value="1">Stage 1</option>
+              <option value="2">Stage 2</option>
+              <option value="3">Stage 3</option>
+              <option value="4">Stage 4</option>
+              <option value="complete">Complete</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>City:</label>
+            <select id="filterCity" onchange="review.applyFilters()">
+              <option value="all">All Cities</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Score:</label>
+            <input type="number" id="filterScoreMin" placeholder="Min" step="0.1" onchange="review.applyFilters()" />
+            <input type="number" id="filterScoreMax" placeholder="Max" step="0.1" onchange="review.applyFilters()" />
+          </div>
+          <button onclick="review.exportCSV()" class="btn btn-secondary">Export CSV</button>
+        </div>
+
+        <div class="table-container">
+          <table id="propertiesTable" class="properties-table">
+            <thead>
+              <tr>
+                <th onclick="review.sortBy('address')">Address</th>
+                <th onclick="review.sortBy('city')">City</th>
+                <th onclick="review.sortBy('auto_score')">Score</th>
+                <th onclick="review.sortBy('jr_grade')">Grade</th>
+                <th>Stage Status</th>
+                <th onclick="review.sortBy('is_excluded')">Excluded</th>
+                <th onclick="review.sortBy('final_max_bid')">Max Bid</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="propertiesTableBody">
+              <tr><td colspan="8">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Analytics Screen -->
+      <section id="analyticsScreen" class="screen">
+        <h2>Analytics</h2>
+
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <h3>Properties by Stage</h3>
+            <canvas id="stageChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Exclusion Breakdown</h3>
+            <canvas id="exclusionChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Score Distribution</h3>
+            <canvas id="scoreChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Properties by City</h3>
+            <div id="cityBreakdown" class="city-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Property Detail Modal -->
+  <div id="propertyModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="app.closeModal()">&times;</span>
+      <div id="propertyDetails"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="config.js"></script>
+  <script src="db.js"></script>
+  <script src="scoring.js"></script>
+  <script src="import.js"></script>
+  <script src="workflow.js"></script>
+  <script src="review.js"></script>
+  <script src="analytics.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
