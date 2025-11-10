@@ -60,8 +60,15 @@ function calculateAutoScore(property) {
   }
 
   // Property type (10% weight)
-  if (property.property_type === 'Single Family') score += 0.9;
-  else if (property.property_type === 'Townhouse' || property.property_type === 'Townhome') score += 0.3;
+  const propertyType = (property.property_type || '').toLowerCase().trim();
+  if (propertyType.includes('single family') || propertyType.includes('singlefamily') ||
+      propertyType.includes('single-family') || propertyType === 'sfr' ||
+      propertyType === 'house' || propertyType === 'residential') {
+    score += 0.9;
+  } else if (propertyType.includes('townhouse') || propertyType.includes('townhome') ||
+             propertyType.includes('town home') || propertyType.includes('town-home')) {
+    score += 0.3;
+  }
 
   // City tier scoring (10% weight)
   const cityTier = getCityTier(property.city);
@@ -124,10 +131,21 @@ function checkExclusions(property) {
     exclusions.push('Excluded City');
   }
 
-  // Property type check
-  const validTypes = ['Single Family', 'Townhouse', 'Townhome'];
-  if (property.property_type && !validTypes.includes(property.property_type)) {
-    exclusions.push('Wrong Property Type');
+  // Property type check - be flexible with variations
+  const propertyType = (property.property_type || '').toLowerCase().trim();
+  const validTypes = [
+    'single family', 'singlefamily', 'single-family',
+    'single family home', 'single family residence',
+    'townhouse', 'townhome', 'town home', 'town-home',
+    'residential', 'sfr', 'house'
+  ];
+
+  const isValidType = validTypes.some(valid =>
+    propertyType.includes(valid) || valid.includes(propertyType)
+  );
+
+  if (!isValidType && propertyType && propertyType !== '') {
+    exclusions.push('Wrong Property Type: ' + property.property_type);
   }
 
   if (exclusions.length > 0) {
