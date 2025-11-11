@@ -7,13 +7,13 @@ const review = {
 
   // Initialize review screen
   async init() {
-    const auction = await db.getActiveAuction();
-    if (!auction) {
+    const currentAuctionId = await loadCurrentAuction();
+    if (!currentAuctionId) {
       document.getElementById('propertiesTableBody').innerHTML = '<tr><td colspan="8">No active auction</td></tr>';
       return;
     }
 
-    this.allProperties = await db.getProperties(auction.id);
+    this.allProperties = await db.getProperties(currentAuctionId);
     this.populateCityFilter();
     this.applyFilters();
   },

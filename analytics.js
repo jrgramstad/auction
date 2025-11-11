@@ -4,16 +4,16 @@ const analytics = {
 
   // Initialize analytics screen
   async init() {
-    const auction = await db.getActiveAuction();
-    if (!auction) {
+    const currentAuctionId = await loadCurrentAuction();
+    if (!currentAuctionId) {
       document.querySelector('#analyticsScreen .analytics-grid').innerHTML = '<div class="empty-state">No active auction</div>';
       return;
     }
 
-    await this.loadStageChart(auction.id);
-    await this.loadExclusionChart(auction.id);
-    await this.loadScoreChart(auction.id);
-    await this.loadCityBreakdown(auction.id);
+    await this.loadStageChart(currentAuctionId);
+    await this.loadExclusionChart(currentAuctionId);
+    await this.loadScoreChart(currentAuctionId);
+    await this.loadCityBreakdown(currentAuctionId);
   },
 
   // Stage progress chart

@@ -1,3 +1,88 @@
+// Load current auction from localStorage or get most recent
+async function loadCurrentAuction() {
+  let currentAuctionId = localStorage.getItem('currentAuctionId');
+
+  if (!currentAuctionId) {
+    // No stored auction, get the most recent
+    try {
+      const { data: auctions, error } = await supabase
+        .from('auctions')
+        .select('id, auction_month')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (auctions && auctions.length > 0) {
+        currentAuctionId = auctions[0].id;
+        localStorage.setItem('currentAuctionId', currentAuctionId);
+        localStorage.setItem('currentAuctionMonth', auctions[0].auction_month);
+      }
+    } catch (err) {
+      console.error('Error loading current auction:', err);
+      return null;
+    }
+  }
+
+  return currentAuctionId;
+}
+
+// Initialize auction selector in header
+async function initAuctionSelector() {
+  try {
+    const { data: auctions, error } = await supabase
+      .from('auctions')
+      .select('id, auction_month')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!auctions || auctions.length === 0) {
+      console.log('No auctions found');
+      return;
+    }
+
+    // Add selector to header
+    const headerContent = document.querySelector('.header-content');
+    const currentAuctionId = localStorage.getItem('currentAuctionId');
+
+    const selectorHtml = `
+      <div class="auction-selector">
+        <label>Current Auction: </label>
+        <select id="auctionSelect" onchange="changeAuction(this.value)">
+          ${auctions.map(a =>
+            `<option value="${a.id}" ${a.id == currentAuctionId ? 'selected' : ''}>
+              ${a.auction_month}
+            </option>`
+          ).join('')}
+        </select>
+      </div>
+    `;
+
+    // Remove existing selector if present
+    const existingSelector = headerContent.querySelector('.auction-selector');
+    if (existingSelector) {
+      existingSelector.remove();
+    }
+
+    headerContent.insertAdjacentHTML('beforeend', selectorHtml);
+  } catch (err) {
+    console.error('Error initializing auction selector:', err);
+  }
+}
+
+// Handle auction change
+window.changeAuction = async function(auctionId) {
+  const select = document.getElementById('auctionSelect');
+  const auctionMonth = select.options[select.selectedIndex].text;
+
+  localStorage.setItem('currentAuctionId', auctionId);
+  localStorage.setItem('currentAuctionMonth', auctionMonth);
+
+  // Reload current screen
+  await app.showScreen(app.currentScreen);
+};
+
 // Main application logic
 const app = {
   currentScreen: 'dashboard',
@@ -63,10 +148,11 @@ const app = {
   },
 
   // Show main app
-  showMainApp() {
+  async showMainApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
-    this.showScreen('dashboard');
+    await initAuctionSelector();
+    await this.showScreen('dashboard');
   },
 
   // Show specific screen
@@ -106,9 +192,9 @@ const app = {
 
   // Load dashboard
   async loadDashboard() {
-    const auction = await db.getActiveAuction();
+    const currentAuctionId = await loadCurrentAuction();
 
-    if (!auction) {
+    if (!currentAuctionId) {
       document.getElementById('activeAuction').textContent = 'No Active Auction';
       document.getElementById('totalProperties').textContent = '0';
       document.getElementById('excludedProperties').textContent = '0';
@@ -118,11 +204,23 @@ const app = {
       return;
     }
 
+    // Get auction details
+    const { data: auction, error } = await supabase
+      .from('auctions')
+      .select('*')
+      .eq('id', currentAuctionId)
+      .single();
+
+    if (error || !auction) {
+      console.error('Could not load auction details:', error);
+      return;
+    }
+
     // Display auction info
     document.getElementById('activeAuction').textContent = auction.auction_month;
 
     // Get stats
-    const stats = await db.getAuctionStats(auction.id);
+    const stats = await db.getAuctionStats(currentAuctionId);
 
     document.getElementById('totalProperties').textContent = stats.total;
     document.getElementById('excludedProperties').textContent = stats.excluded;
@@ -157,7 +255,7 @@ const app = {
     this.updateProgressBar('stage5', stats.stage5Complete, stats.stage4Complete);
 
     // Update workflow badge counts
-    const properties = await db.getProperties(auction.id);
+    const properties = await db.getProperties(currentAuctionId);
     document.getElementById('stage1Count').textContent = properties.filter(p => !p.stage_1_complete && !p.is_excluded).length;
     document.getElementById('stage2Count').textContent = properties.filter(p => p.stage_1_complete && !p.stage_2_complete && !p.is_excluded).length;
     document.getElementById('stage3Count').textContent = properties.filter(p => p.stage_2_complete && !p.stage_3_complete && !p.is_excluded).length;

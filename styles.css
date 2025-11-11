@@ -85,6 +85,33 @@ body {
   font-weight: 600;
 }
 
+/* Auction Selector */
+.auction-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auction-selector label {
+  color: white;
+  font-weight: 500;
+}
+
+.auction-selector select {
+  padding: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.auction-selector select option {
+  background: #1f2937;
+  color: white;
+}
+
 /* Navigation */
 .app-nav {
   background: white;

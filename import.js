@@ -197,6 +197,10 @@ const importData = {
       // Show summary
       this.showImportSummary(allProperties);
 
+      // Store current auction in localStorage
+      localStorage.setItem('currentAuctionId', auction.id);
+      localStorage.setItem('currentAuctionMonth', auctionMonth);
+
       app.showToast('Import completed successfully!', 'success');
 
       // Refresh dashboard

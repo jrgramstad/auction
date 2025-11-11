@@ -30,13 +30,13 @@ const workflow = {
 
   // Load properties for a specific stage
   async loadStageProperties(stage) {
-    const auction = await db.getActiveAuction();
-    if (!auction) {
+    const currentAuctionId = await loadCurrentAuction();
+    if (!currentAuctionId) {
       this.properties = [];
       return;
     }
 
-    this.properties = await db.getPropertiesForStage(auction.id, stage);
+    this.properties = await db.getPropertiesForStage(currentAuctionId, stage);
     document.getElementById(`stage${stage}Count`).textContent = this.properties.length;
   },
 
