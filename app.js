@@ -178,6 +178,11 @@ const app = {
       case 'dashboard':
         await this.loadDashboard();
         break;
+      case 'import':
+        if (typeof importData !== 'undefined' && importData.loadExistingAuctions) {
+          await importData.loadExistingAuctions();
+        }
+        break;
       case 'workflow':
         await workflow.showStage(1);
         break;

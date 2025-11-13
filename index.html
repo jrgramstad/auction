@@ -178,11 +178,30 @@
             <input type="file" id="auctionFiles" accept=".xlsx,.xls,.csv" multiple />
           </div>
 
-          <button onclick="importData.processAuctionFiles()" class="btn btn-primary">Import & Process</button>
+          <div class="replace-option">
+            <label>
+              <input type="checkbox" id="replaceExisting">
+              Replace existing data for this month (if exists)
+            </label>
+          </div>
+
+          <button onclick="importData.processAuctionFiles()" class="btn btn-primary" id="importButton">Import & Process</button>
           <div id="auctionStatus" class="status-message"></div>
         </div>
 
         <div id="importSummary" class="import-summary" style="display: none;"></div>
+
+        <!-- Manage Existing Auctions Section -->
+        <div class="delete-section">
+          <h3>Manage Existing Auctions</h3>
+          <div class="warning-box">
+            ⚠️ Warning: Deleting an auction removes ALL property data for that month permanently.
+          </div>
+
+          <div class="auction-list" id="existingAuctions">
+            <p>Loading auctions...</p>
+          </div>
+        </div>
       </section>
 
       <!-- Team Workflow Screen -->

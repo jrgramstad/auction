@@ -163,6 +163,37 @@ const importData = {
 
       document.getElementById('auctionStatus').innerHTML = '<div class="info">Processing files...</div>';
 
+      // Check if we should replace existing data
+      const replaceExisting = document.getElementById('replaceExisting')?.checked || false;
+
+      if (replaceExisting) {
+        // Check if auction month already exists
+        const { data: existing, error: checkError } = await supabase
+          .from('auctions')
+          .select('id')
+          .eq('auction_month', auctionMonth)
+          .single();
+
+        if (existing && !checkError) {
+          // Delete existing auction and its properties
+          const { error: propError } = await supabase
+            .from('auction_properties')
+            .delete()
+            .eq('auction_id', existing.id);
+
+          if (propError) throw propError;
+
+          const { error: auctionError } = await supabase
+            .from('auctions')
+            .delete()
+            .eq('id', existing.id);
+
+          if (auctionError) throw auctionError;
+
+          document.getElementById('auctionStatus').innerHTML = '<div class="info">Replaced existing data. Importing new data...</div>';
+        }
+      }
+
       // Create auction record
       const auction = await db.createAuction({
         auction_month: auctionMonth,
@@ -202,6 +233,9 @@ const importData = {
       localStorage.setItem('currentAuctionMonth', auctionMonth);
 
       app.showToast('Import completed successfully!', 'success');
+
+      // Reload existing auctions list
+      await this.loadExistingAuctions();
 
       // Refresh dashboard
       setTimeout(() => {
@@ -314,5 +348,128 @@ const importData = {
 
     summaryDiv.innerHTML = html;
     summaryDiv.style.display = 'block';
+  },
+
+  // Load existing auctions for management
+  async loadExistingAuctions() {
+    try {
+      const { data: auctions, error } = await supabase
+        .from('auctions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const container = document.getElementById('existingAuctions');
+
+      if (!auctions || auctions.length === 0) {
+        container.innerHTML = '<p>No existing auctions found.</p>';
+        return;
+      }
+
+      // Get property counts for each auction
+      for (let auction of auctions) {
+        const { data: counts } = await supabase
+          .from('auction_properties')
+          .select('is_excluded')
+          .eq('auction_id', auction.id);
+
+        auction.total_properties = counts ? counts.length : 0;
+        auction.active_properties = counts ? counts.filter(p => !p.is_excluded).length : 0;
+        auction.excluded_properties = counts ? counts.filter(p => p.is_excluded).length : 0;
+      }
+
+      container.innerHTML = auctions.map(auction => `
+        <div class="auction-item">
+          <div class="auction-info">
+            <strong>${auction.auction_month}</strong>
+            <div class="auction-stats">
+              Total: ${auction.total_properties} properties |
+              Active: ${auction.active_properties} |
+              Excluded: ${auction.excluded_properties} |
+              Created: ${new Date(auction.created_at).toLocaleDateString()}
+            </div>
+          </div>
+          <button class="btn-delete" onclick="deleteAuction('${auction.id}', '${auction.auction_month}')">
+            Delete
+          </button>
+        </div>
+      `).join('');
+    } catch (err) {
+      console.error('Error loading existing auctions:', err);
+      document.getElementById('existingAuctions').innerHTML = '<p class="error">Error loading auctions</p>';
+    }
   }
 };
+
+// Delete auction function (global)
+async function deleteAuction(auctionId, auctionMonth) {
+  // Confirm deletion
+  const confirmMsg = `Are you sure you want to delete the auction for ${auctionMonth}?\n\n` +
+                     `This will permanently remove ALL property data for this month.\n\n` +
+                     `Type "DELETE" to confirm:`;
+
+  const userConfirm = prompt(confirmMsg);
+
+  if (userConfirm !== 'DELETE') {
+    app.showToast('Deletion cancelled', 'info');
+    return;
+  }
+
+  try {
+    // Show loading state
+    const allButtons = document.querySelectorAll('.btn-delete');
+    allButtons.forEach(btn => {
+      btn.disabled = true;
+    });
+
+    app.showToast('Deleting auction data...', 'info');
+
+    // Delete all properties for this auction first (due to foreign key)
+    const { error: propError } = await supabase
+      .from('auction_properties')
+      .delete()
+      .eq('auction_id', auctionId);
+
+    if (propError) throw propError;
+
+    // Then delete the auction itself
+    const { error: auctionError } = await supabase
+      .from('auctions')
+      .delete()
+      .eq('id', auctionId);
+
+    if (auctionError) throw auctionError;
+
+    // Clear from localStorage if this was the current auction
+    if (localStorage.getItem('currentAuctionId') === auctionId.toString()) {
+      localStorage.removeItem('currentAuctionId');
+      localStorage.removeItem('currentAuctionMonth');
+    }
+
+    app.showToast(`Successfully deleted ${auctionMonth} auction data`, 'success');
+
+    // Reload the list
+    await importData.loadExistingAuctions();
+
+    // Reload auction selector if on main app
+    if (typeof initAuctionSelector === 'function') {
+      await initAuctionSelector();
+    }
+
+    // Reload current screen if needed
+    if (app && app.currentScreen) {
+      await app.showScreen(app.currentScreen);
+    }
+
+  } catch (error) {
+    console.error('Error deleting auction:', error);
+    app.showToast('Error deleting auction: ' + error.message, 'error');
+
+    // Re-enable buttons
+    const allButtons = document.querySelectorAll('.btn-delete');
+    allButtons.forEach(btn => {
+      btn.disabled = false;
+    });
+  }
+}
